@@ -1,8 +1,12 @@
 use std::{
     collections::VecDeque,
-    net::TcpStream,
+    io::{Read, Write},
+    net::{SocketAddr, TcpStream},
     sync::{Arc, Mutex},
+    thread,
 };
+
+use server::Grid;
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
 
@@ -13,13 +17,12 @@ mod server;
 // proccess, läsa info om robot
 // main process,
 
-
-fn send_and_receive_data(ip: &str , data: &str) -> Result<String , std::io::Error> {
+pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Error> {
     // Parse the IP address
-    let addr: SocketAddr = format!("{}:8080", ip).Parse()?;
+    let addr: SocketAddr = format!("{}:8080", ip).parse().unwrap();
 
     // Elablera en TCP-anslutning
-    Let mut stream = TcpStream::connect(addr)?;
+    let mut stream = TcpStream::connect(addr)?;
 
     // Skicka data till servern
     stream.write_all(data.as_bytes())?;
@@ -28,22 +31,17 @@ fn send_and_receive_data(ip: &str , data: &str) -> Result<String , std::io::Erro
     let mut buffer = String::new();
     stream.read_to_string(&mut buffer)?;
 
-    ok(buffer)
-
+    Ok(buffer)
 }
- 
+
 fn main() {
-      let ip_address = "127.0.0.1"; 
-      let data_to_send = "Hello, server";
+    let grid = Arc::new(Mutex::new(Grid::new()));
 
-      match send_and_receive_data(ip_address, data_to_send) {
-            ok(response) => println!("Mottaget svar: {}", response), 
-            Err(e) => eprintln!("Fel: {}", e),
-
-
-      }
+    let database_grid = grid.clone();
+    thread::spawn(move || {
+        read_order_from_database();
+    });
 }
-
 
 fn read_order_from_database() {
     // läser från databasen för en order
