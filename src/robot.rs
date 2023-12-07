@@ -49,7 +49,7 @@ fn receive_sortconfrimation(sortconfirmation){
 }
 
 fn received_sortrequest(color:Color){
-    let oerson_json = json({
+    let oerson_json = json!({
         "command":Receivetype::SortRequest
         "colors": color,
     });
