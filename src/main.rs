@@ -102,20 +102,3 @@ fn interpret_robot() {
     //     }
     // };
 }
-
-// Huvudfunktion som simulerar skickande och mottagande av olika meddelanden
-fn main() {
-    // std::thread::spawn(|| loop {
-    //     read_order_from_database();
-    // });
-
-    // std::thread::spawn(|| loop {
-    //     interpret_robot();
-    // });
-
-    // let x = Mutex::new(50);
-    // {
-    //     let mut y = x.lock().unwrap();
-    //     *y = 10;
-    // }
-}
