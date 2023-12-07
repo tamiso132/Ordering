@@ -7,12 +7,9 @@ use std::{
 use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
 
-use diesel::prelude::*;
-use diesel::pg::PgConnection;
-use dotenv::dotenv;
-use std::env; 
+use crate::send_and_receive_data;
 
-use crate::{Position, Grid, SERVER_IP, send_and_receive_data};
+
  //use crate::send_and_receive_data;
 
 
@@ -44,12 +41,10 @@ impl From<u8> for Color {
 const XMAX: usize = 4;
 const YMAX: usize = 6;
 
-const AVAILABLE_ORDER_REQUEST: &'static str = "
-PROCESS orders/oldest ORDSYS/1.0\n
-{”status”: ”processing”}";
+const AVAILABLE_ORDER_REQUEST: &'static str = "PROCESS orders/oldest ORDSYS/1.0\n{”status”: ”processing”}";
 const LAGER_POSITIONS_REQUEST: &'static str = "PLACE HOLDER";
 
-const SERVER_IP: &'static str = "PLACEHOLDER";
+const SERVER_IP: &'static str = "213.200.135.239:7878";
 
 pub struct Grid {
     grid: [[u8; XMAX]; YMAX],
@@ -107,7 +102,7 @@ impl Grid {
         positions
     }
     pub fn insert_lager_position(&mut self, x:u8, y:u8, color:Color){
-        self.grid[x][y] = color;
+        self.grid[x as usize][y as usize] = color as u8;
     }
 }
 
@@ -167,8 +162,13 @@ struct ProductOrder {
     total_product_amount: u16,
 }
 
+
+
 pub fn read_order_updates() {
-    let order_json = send_and_receive_data(SERVER_IP, LAGER_POSITIONS_REQUEST).unwrap();
+    let order_json = send_and_receive_data(SERVER_IP, AVAILABLE_ORDER_REQUEST).unwrap();
+    let s_test = ""amount": .."
+    order_json.find("positions..]")
+    println!("{}", order_json);
     // TODO check if any new orders
     // if any new orders, add them to a order queue
 }

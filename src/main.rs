@@ -6,7 +6,7 @@ use std::{
     thread,
 };
 
-use server::Grid;
+use server::{Grid, read_order_updates};
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
 
@@ -19,7 +19,7 @@ mod server;
 
 pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Error> {
     // Parse the IP address
-    let addr: SocketAddr = format!("{}:8080", ip).parse().unwrap();
+    let addr: SocketAddr = format!("{}", ip).parse().unwrap();
 
     // Elablera en TCP-anslutning
     let mut stream = TcpStream::connect(addr)?;
@@ -35,12 +35,13 @@ pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Er
 }
 
 fn main() {
-    let grid = Arc::new(Mutex::new(Grid::new()));
+    //let grid = Arc::new(Mutex::new(Grid::new()));
 
-    let database_grid = grid.clone();
-    thread::spawn(move || {
-        read_order_from_database();
-    });
+    read_order_updates();
+    // let database_grid = grid.clone();
+    // thread::spawn(move || {
+    //     read_order_from_database();
+    // });
 }
 
 fn read_order_from_database() {
