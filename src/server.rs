@@ -7,7 +7,13 @@ use std::{
 use serde_derive::{Deserialize, Serialize};
 use serde_json::json;
 
-use crate::send_and_receive_data;
+use diesel::prelude::*;
+use diesel::pg::PgConnection;
+use dotenv::dotenv;
+use std::env; 
+
+use crate::{Position, Grid, SERVER_IP, send_and_receive_data};
+ //use crate::send_and_receive_data;
 
 #[repr(u8)]
 enum Color {
@@ -158,4 +164,41 @@ pub fn read_order_updates() {
     let order_json = send_and_receive_data(SERVER_IP, LAGER_POSITIONS_REQUEST).unwrap();
     // TODO check if any new orders
     // if any new orders, add them to a order queue
+}
+
+#[derive(Insertable)]
+#[table_name = "lager_positioner"]
+struct NewLagerPosition<'a> {
+     x: usize,
+     y: usize, 
+     color: u8,
+}
+ 
+// Funktion för att lägga till en ny lagerposition i databasen
+pub fn insert_lager_position(x: usize, y: usize, color: u8) -> Result<(), diesel::result::Error> {
+    use lager_positioner::dsl::*;
+
+    let new_lager_position = NewLagerPosition { x, y, color };
+
+    let connection = establish_connection();
+
+    diesel::insert_into(lager_positioner)
+        .values(&new_lager_position)
+        .execute(&connection)?;
+
+    Ok(())
+}
+
+// Funktion för att läsa uppdateringar av lagerpositioner från servern och uppdatera grid-objektet
+pub fn read_lager_position_updates(grid: &mut Grid) {
+    let lager_positions_json = send_and_receive_data(SERVER_IP, LAGER_POSITIONS_REQUEST).unwrap();
+
+    // TODO: Implementera logiken för att tolka JSON-svaret och uppdatera grid-objektet med nya lagerpositioner
+}
+
+// Hjälpfunktion för att etablera en databasanslutning
+fn establish_connection() -> PgConnection {
+    dotenv().ok();
+    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL måste vara satt i .env-filen");
+    PgConnection::establish(&database_url).expect(&format!("Fel vid anslutning till databasen: {}", database_url))
 }
