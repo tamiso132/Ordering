@@ -57,7 +57,7 @@ pub struct Grid {
 impl Grid {
     pub fn new() -> Self {
         //TODO get init from database
-        let json_lager = send_and_receive_data(SERVER_IP, LAGER_POSITIONS_REQUEST).unwrap();
+        send_and_receive_data(SERVER_IP, AVAILABLE_ORDER_REQUEST);
 
         Self {
             grid: [[0; XMAX]; YMAX],
