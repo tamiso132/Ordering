@@ -15,7 +15,7 @@ use crate::send_and_receive_data;
 
 
 #[repr(u8)]
-enum Color {
+pub enum Color {
     None,
     Red,
     Yellow,
@@ -166,8 +166,7 @@ struct ProductOrder {
 
 pub fn read_order_updates() {
     let order_json = send_and_receive_data(SERVER_IP, AVAILABLE_ORDER_REQUEST).unwrap();
-    let s_test = ""amount": .."
-    order_json.find("positions..]")
+    order_json.find("positions..]");
     println!("{}", order_json);
     // TODO check if any new orders
     // if any new orders, add them to a order queue
