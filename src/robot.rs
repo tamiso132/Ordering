@@ -54,6 +54,6 @@ fn receive_sortconfrimation(){
 fn received_sortrequest(){
     let oerson_json = json!({
         "command":Receivetype::SortRequest
-    });
+  });
 }
    
