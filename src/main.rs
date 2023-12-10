@@ -3,15 +3,15 @@ use std::{
     io::{Read, Write},
     net::{SocketAddr, TcpStream},
     sync::{Arc, Mutex},
-    thread,
+    thread, time::Duration,
 };
 
-use server::{Grid, read_order_updates};
+use server::{Grid, read_order_updates, Position};
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
 
 mod robot;
-mod server;
+pub mod server;
 
 // process, läsa om ny order har kommit,
 // proccess, läsa info om robot
@@ -34,72 +34,85 @@ pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Er
     Ok(buffer)
 }
 
+#[derive(Clone)]
+struct Queue<T: Clone> where T: Clone{
+    list_of_queue:Vec<T>,
+}
+
+fn read_database_thread(read_order_flag: Arc<Mutex<bool>>, orders:Arc<Mutex<Queue<([u16;4], u16)>>>){
+    loop {
+        {
+            let mut read_flag = read_order_flag.lock().expect("Failed to lock read_order_flag");
+
+            if *read_flag {
+                match server::read_order_updates() {
+                    Some(order) => {
+                        *read_flag = false;
+                        orders.lock().expect("Failed to lock current_orders").list_of_queue.push(order);
+                    }
+                    None => {}
+                }
+            }
+        }
+
+        thread::sleep(Duration::from_secs(60));
+    }
+}
+
+fn read_robot_thread(){
+}
+
+type OrdersFinished = Arc<Mutex<Queue::<(Vec<Position>, u16)>>>;
+type CurrentOrders = Arc<Mutex<Queue::<([u16; 4], u16)>>>;
+
 fn main() {
-    //let grid = Arc::new(Mutex::new(Grid::new()));
+    let grid = Arc::new(Mutex::new(Grid::new()));
 
-    read_order_updates();
-    // let database_grid = grid.clone();
-    // thread::spawn(move || {
-    //     read_order_from_database();
-    // });
+    let current_orders = CurrentOrders::new(Mutex::new(Queue { list_of_queue: vec![] }));
+    let finished_orders = OrdersFinished::new(Mutex::new(Queue { list_of_queue: vec![] }));
+
+    let read_order_flag = Arc::new(Mutex::new(true));
+
+
+    let current_orders_1 = current_orders.clone();
+    let read_order_flag_1 = read_order_flag.clone();
+
+    let finished_add = finished_orders.clone();
+
+    thread::spawn(move || {
+       read_database_thread(read_order_flag_1, current_orders_1);
+    });
+
+    thread::spawn(move || {
+        robot::robot_read(read_order_flag.clone(), finished_add.clone());
+    });
+
+    loop {
+        thread::sleep(Duration::from_secs(10));
+        process_order_queue(grid.clone(), current_orders.clone());
+        process_finished_order(finished_orders.clone());
+      
+    }
+   // server::send_order_done_db(vec![Position{position_x: 3, position_y: 3}], 9);
 }
 
-fn read_order_from_database() {
-    // läser från databasen för en order
-
-    // let mut stream = TcpStream::connect("127.0.0.1:34254")?;
-
-    // stream.write(&[1])?;
-    // stream.read(&mut [0; 128])?;
-
-    // gör om json format till class
-    // let example_json = "example";
-
-    // let order = serde_json::from_str::<Order>(example_json).unwrap();
-
-    // let mut blue = 0; // antal blå i beställning
-    // let mut red = 0;
-    // let mut green = 0;
-    // let mut yellow = 0;
-
-    // for e in order.amount {
-    //     let amount = e.total_product_amount; // antal av den färgen
-    //     let product_type = e.product_type; // vilken typ av färg
-
-    //     match product_type.as_str() {
-    //         "Red block" => red += amount,
-    //         "Yellow block" => yellow += amount,
-    //         "Green block" => green += amount,
-    //         "Blue block" => blue += amount,
-    //         _ => {
-    //             panic!("FICK KONSTIG info från database {}", product_type) // databasen skickar fel info
-    //         }
-    //     }
-    // }
-    // hitta positioner för de olika färgerna
+fn process_finished_order(finished_orders: OrdersFinished){
+    let mut orders_done = finished_orders.lock().unwrap();
+    if orders_done.list_of_queue.len() > 0{
+        let order_done = orders_done.list_of_queue.pop().unwrap();
+        server::send_order_done_db(order_done.0, order_done.1 as u32);
+    }
 }
 
-fn send_order() {}
+fn process_order_queue(grid:Arc<Mutex<Grid>>,current_orders:CurrentOrders){
+    let mut current_orders = current_orders.lock().expect("Failed to lock current_orders");
+    let order_queue = &mut current_orders.list_of_queue;
 
-fn send_robot() {
-    // läs från databasen
-    // om de finns beställning
-    // skicka Order till robot
-}
+    if order_queue.len() > 0 {
+        let g = grid.lock();
 
-fn interpret_robot() {
-    // let order_type = match typ {
-    //     0 => {
-    //         // skicka till servern att beställning är klar
-    //         // ta bort den från listan
-    //     }
-    //     1 => {
-    //         // uppdatera listan
-    //         // skicka uppdatering till servern
-    //     }
-    //     2 => {
-    //         // hitta en ledig position,
-    //         // skicka den lediga platsen till robotsystemet
-    //     }
-    // };
+       
+        let positions = g.unwrap().get_positions_for_order( order_queue[0].0);
+        robot::send_order(order_queue[0].1 as u8, positions);
+    }
 }
