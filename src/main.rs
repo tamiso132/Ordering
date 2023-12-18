@@ -7,10 +7,11 @@ use std::{
     time::Duration,
 };
 
-use server::{read_order_updates, Grid, Position};
+use server::{read_order_updates, Grid, Position, PositionWithColor};
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
 
+mod graphic;
 mod robot;
 pub mod server;
 
@@ -60,8 +61,6 @@ fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
     }
 }
 
-fn read_robot_thread() {}
-
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
@@ -75,47 +74,66 @@ fn main() {
     let is_order_in_process: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     let current_order: Arc<Mutex<Option<([u16; 4], u16)>>> = Arc::new(Mutex::new(None));
 
-    let current_orders = CurrentOrders::new(Mutex::new(Queue {
-        list_of_queue: VecDeque::new(),
-    }));
     let finished_orders = OrdersFinished::new(Mutex::new(Queue {
         list_of_queue: VecDeque::new(),
     }));
+
     let orders_to_process = CurrentOrders::new(Mutex::new(Queue {
-        list_of_queue: VecDeque::new(),
-    }));
-    let finished_orders = OrdersFinished::new(Mutex::new(Queue {
         list_of_queue: VecDeque::new(),
     }));
 
     let sort_request: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    let sort_confirm: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
 
-    let mut robot_stream = Arc::new(Mutex::new(stream));
+    let robot_stream = Arc::new(Mutex::new(stream));
 
-    let current_orders_1 = current_orders.clone();
+    let current_orders_1 = orders_to_process.clone();
+
     let finished_add = finished_orders.clone();
+    let grid_clone = Arc::clone(&grid);
     thread::spawn(move || {
         read_database_thread(current_orders_1);
     });
 
     thread::spawn(move || {
-        robot::robot_read(robot_stream.clone(), finished_add.clone());
+        robot::robot_read(
+            robot_stream.clone(),
+            sort_request,
+            finished_add.clone(),
+            grid,
+        );
     });
 
+    env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
+
+    let history_orders = Arc::new(Mutex::new(vec![]));
     loop {
         thread::sleep(Duration::from_secs(10));
+        let grid = Arc::clone(&grid_clone);
         process_order_queue(
             grid.clone(),
             orders_to_process.clone(),
             is_order_in_process.clone(),
             current_order.clone(),
         );
-        process_finished_order(finished_orders.clone());
+        process_finished_order(
+            finished_orders.clone(),
+            history_orders.clone(),
+            current_order.clone(),
+        );
+        graphic::run(
+            history_orders.clone(),
+            current_order.clone(),
+            orders_to_process.clone(),
+        )
+        .unwrap();
     }
 }
 
-fn process_finished_order(finished_orders: OrdersFinished) {
+fn process_finished_order(
+    finished_orders: OrdersFinished,
+    history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
+    current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
+) {
     let orders_done_len = finished_orders.lock().unwrap().list_of_queue.len();
     if orders_done_len > 0 {
         let order_done = finished_orders
@@ -125,6 +143,9 @@ fn process_finished_order(finished_orders: OrdersFinished) {
             .pop_front()
             .unwrap();
 
+        let d = current_order.lock().unwrap().clone().unwrap();
+        history_orders.lock().unwrap().push((d.0, d.1));
+        *current_order.lock().unwrap() = None;
         server::send_order_done_db(order_done.0, order_done.1 as u32);
     }
 }

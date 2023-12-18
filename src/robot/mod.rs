@@ -17,37 +17,13 @@ use crate::{
 
 const MY_IP: &str = "PLACE HOLDER";
 
-#[derive(Serialize, Deserialize)]
-enum SendType {
-    Order, // send order info to robot
-    Sort,  // send sort info to robot
-}
-
-#[derive(Serialize, Deserialize)]
-#[repr(u8)]
-enum Receivetype {
-    OrderConfirmation, // the order is done
-    SortConfirmation,  // confirm I put into lager
-    SortRequest,       // where to place
-}
-
-impl From<u8> for Receivetype {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::OrderConfirmation,
-            1 => Self::SortConfirmation,
-            2 => Self::SortRequest,
-            _ => panic!("Command is not a thing"),
-        }
-    }
-}
-
 pub fn create_stream() {}
 
 pub fn robot_read(
     stream: Arc<Mutex<TcpStream>>,
     sort_request: Arc<Mutex<bool>>,
-    finished_orders: Arc<Mutex<Queue<(Vec<PositionWithColor>, u16)>>>,
+    finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>,
+    grid: Arc<Mutex<Grid>>,
 ) {
     loop {
         let mut buffer = String::new();
@@ -57,47 +33,56 @@ pub fn robot_read(
             read_half.read_to_string(&mut buffer);
         }
 
+        let finished_orders = finished_orders.clone();
+        let sort_request = Arc::clone(&sort_request);
+        let grid = Arc::clone(&grid);
         if buffer.len() > 0 {
-            let finished_orders = finished_orders.clone();
             thread::spawn(move || {
-                interpret_robot(buffer, finished_orders, sort_request);
+                interpret_robot(buffer, finished_orders, sort_request, grid);
             });
         }
     }
 }
 
-fn write_robot() {}
-
 fn interpret_robot(
     buffer: String,
-    finished_orders: Arc<Mutex<Queue<(Vec<PositionWithColor>, u16)>>>,
+    finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>,
     sort_request: Arc<Mutex<bool>>,
+    grid: Arc<Mutex<Grid>>,
 ) {
     if buffer.len() > 0 {
         let s: Value = serde_json::from_str(&buffer).unwrap();
 
-        let command_type = s["command"].to_string().as_str();
+        let command_type = s["command"].to_string();
+        let command_type = command_type.as_str();
 
         match command_type {
             "order_confirm" => {
                 let order_id = s["order_id"].as_u64().unwrap();
-                let positions: Vec<PositionWithColor> =
+                let positions: Vec<Position> =
                     serde_json::from_str(&s["positions"].to_string()).unwrap();
                 finished_orders
                     .lock()
                     .unwrap()
                     .list_of_queue
-                    .push_front((order_id, positions));
-
-                // TODO send confirm to database
+                    .push_front((positions, order_id as u16));
             }
             "sort_confirm" => {
-                //TODO Update database
-                server::send_order_done_db(positions, order_id)
+                let x = s["x"].as_u64().unwrap() as u8;
+                let y = s["y"].as_u64().unwrap() as u8;
+                let color = s["color"].as_u64().unwrap() as u8;
+                let color = Color::from(color);
+                grid.lock().unwrap().sort_insert_lager_position(x, y, color);
             }
             "sort_request" => {
                 *sort_request.lock().unwrap() = true;
+                let pos = grid.lock().unwrap().get_free_position().unwrap();
+                send_sort(Position {
+                    position_x: pos.0,
+                    position_y: pos.1,
+                });
             }
+            _ => {}
         }
     }
 }
@@ -105,38 +90,17 @@ fn interpret_robot(
 pub fn send_order(order_id: u8, positions: Vec<Position>) {
     let person_json = json!({
         "command": "order",
-        "order id": order_id,
+        "order-id": order_id,
         "positions": positions
     });
     send_and_receive_data("dd", person_json.to_string().as_str());
 }
 
-fn send_sort(position: Position, color: Color) {
+fn send_sort(position: Position) {
     let person_json = json!({
         "command": "sort_info",
-        "color": color as u8,
         "x": position.position_x,
         "y": position.position_y,
     });
     send_and_receive_data("dd", person_json.as_str().unwrap());
-}
-
-fn receive_orderconfrimation(order_id: u8) {
-    let person_json = json!({
-      "command": Receivetype::OrderConfirmation as u8,
-      //"positions" vec<Positions>
-      "order_id": order_id,
-    });
-}
-
-fn receive_sortconfrimation() {
-    let person_json = json!({
-     "command": Receivetype::SortConfirmation as u8,
-    });
-}
-
-fn received_sortrequest() {
-    let oerson_json = json!({
-        "command":Receivetype::SortRequest as u8
-    });
 }

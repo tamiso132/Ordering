@@ -20,9 +20,9 @@ pub struct Position {
 }
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 pub struct PositionWithColor {
-    pub x: usize,
-    pub y: usize,
-    pub color: u8,
+    pub position_x: usize,
+    pub position_y: usize,
+    pub product_type_id: u8,
 }
 
 #[repr(u8)]
@@ -133,7 +133,6 @@ impl Grid {
         update_position(x as u32, y as u32, color);
     }
 
-    pub fn free_position_confirm() {}
     pub fn get_free_position(&self) -> Option<(usize, usize)> {
         for x in 0..XMAX {
             for y in 0..YMAX {
