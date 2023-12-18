@@ -1,7 +1,7 @@
 use std::{
     collections::VecDeque,
     io::{Read, Write},
-    net::{SocketAddr, TcpStream},
+    net::{SocketAddr, TcpListener, TcpStream},
     sync::{Arc, Mutex},
     thread,
     time::Duration,
@@ -65,8 +65,13 @@ fn read_robot_thread() {}
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
+const MYIP: &str = "";
 fn main() {
     let grid = Arc::new(Mutex::new(Grid::new()));
+    let stream_bind = TcpListener::bind(MYIP).unwrap();
+    let mut stream = stream_bind.accept().unwrap().0;
+    stream.set_nonblocking(true);
+
     let is_order_in_process: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     let current_order: Arc<Mutex<Option<([u16; 4], u16)>>> = Arc::new(Mutex::new(None));
 
@@ -83,6 +88,11 @@ fn main() {
         list_of_queue: VecDeque::new(),
     }));
 
+    let sort_request: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    let sort_confirm: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+
+    let mut robot_stream = Arc::new(Mutex::new(stream));
+
     let current_orders_1 = current_orders.clone();
     let finished_add = finished_orders.clone();
     thread::spawn(move || {
@@ -90,7 +100,7 @@ fn main() {
     });
 
     thread::spawn(move || {
-        robot::robot_read(finished_add.clone());
+        robot::robot_read(robot_stream.clone(), finished_add.clone());
     });
 
     loop {
@@ -102,14 +112,6 @@ fn main() {
             current_order.clone(),
         );
         process_finished_order(finished_orders.clone());
-    }
-}
-
-fn process_finished_order(finished_orders: OrdersFinished) {
-    let mut orders_done = finished_orders.lock().unwrap();
-    if orders_done.list_of_queue.len() > 0 {
-        let order_done = orders_done.list_of_queue.pop().unwrap();
-        // server::send_order_done_db(vec![Position{position_x: 3, position_y: 3}], 9);
     }
 }
 

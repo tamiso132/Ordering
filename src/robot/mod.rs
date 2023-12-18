@@ -11,11 +11,11 @@ use serde_json::{json, Number, Value};
 
 use crate::{
     send_and_receive_data,
-    server::{self, Color, Position},
+    server::{self, Color, Grid, Position, PositionWithColor},
     Queue,
 };
 
-const ROBOT_IP: &str = "PLACE HOLDER";
+const MY_IP: &str = "PLACE HOLDER";
 
 #[derive(Serialize, Deserialize)]
 enum SendType {
@@ -42,22 +42,12 @@ impl From<u8> for Receivetype {
     }
 }
 
-pub fn robot_read(finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>) {
-    let stream = TcpStream::connect(ROBOT_IP).unwrap();
-    stream.set_read_timeout(Some(Duration::from_millis(500)));
+pub fn create_stream() {}
 
-    let mut stream_read = Arc::new(Mutex::new(stream));
-
-    let mut stream_write = stream_read.clone();
-
-    read_robot_commands(stream_read, finished_orders);
-}
-
-fn write_robot() {}
-
-fn read_robot_commands(
+pub fn robot_read(
     stream: Arc<Mutex<TcpStream>>,
-    finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>,
+    sort_request: Arc<Mutex<bool>>,
+    finished_orders: Arc<Mutex<Queue<(Vec<PositionWithColor>, u16)>>>,
 ) {
     loop {
         let mut buffer = String::new();
@@ -70,30 +60,44 @@ fn read_robot_commands(
         if buffer.len() > 0 {
             let finished_orders = finished_orders.clone();
             thread::spawn(move || {
-                interpret_robot(buffer, finished_orders);
+                interpret_robot(buffer, finished_orders, sort_request);
             });
         }
     }
 }
 
-fn interpret_robot(buffer: String, finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>) {
+fn write_robot() {}
+
+fn interpret_robot(
+    buffer: String,
+    finished_orders: Arc<Mutex<Queue<(Vec<PositionWithColor>, u16)>>>,
+    sort_request: Arc<Mutex<bool>>,
+) {
     if buffer.len() > 0 {
         let s: Value = serde_json::from_str(&buffer).unwrap();
 
-        let command_type: Receivetype = (s["command"].as_u64().unwrap() as u8).into();
+        let command_type = s["command"].to_string().as_str();
 
         match command_type {
-            Receivetype::OrderConfirmation => {
+            "order_confirm" => {
                 let order_id = s["order_id"].as_u64().unwrap();
-                let positions: Vec<Position> =
+                let positions: Vec<PositionWithColor> =
                     serde_json::from_str(&s["positions"].to_string()).unwrap();
+                finished_orders
+                    .lock()
+                    .unwrap()
+                    .list_of_queue
+                    .push_front((order_id, positions));
 
                 // TODO send confirm to database
             }
-            Receivetype::SortConfirmation => {
+            "sort_confirm" => {
                 //TODO Update database
+                server::send_order_done_db(positions, order_id)
             }
-            Receivetype::SortRequest => todo!(),
+            "sort_request" => {
+                *sort_request.lock().unwrap() = true;
+            }
         }
     }
 }
@@ -107,11 +111,12 @@ pub fn send_order(order_id: u8, positions: Vec<Position>) {
     send_and_receive_data("dd", person_json.to_string().as_str());
 }
 
-fn send_sort(positions: Position, color: Color) {
+fn send_sort(position: Position, color: Color) {
     let person_json = json!({
-        "command": SendType::Sort as u8,
-        "color": color.to_str(),
-        "positions": positions,
+        "command": "sort_info",
+        "color": color as u8,
+        "x": position.position_x,
+        "y": position.position_y,
     });
     send_and_receive_data("dd", person_json.as_str().unwrap());
 }
