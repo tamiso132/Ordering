@@ -4,8 +4,8 @@ use std::{
     sync::{Arc, Mutex}, ops::Add,
 };
 
-use serde_derive::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_derive::{Deserialize, Serialize}; // Importera attribut för att automatisk serialisering och deserialisering av strukturer med serde.
+use serde_json::{json, Value}; // Importera funktioner och typer från Serde JSON för att arbeta med JSON-data.
 
 use crate::send_and_receive_data;
 
@@ -36,7 +36,7 @@ pub(crate) mod request{
 
 
 pub const SERVER_IP: &'static str = "213.200.135.239:7878";
-const NO_ORDER :&str = "ORDSYS/1.0 NOT_READY";
+const NO_ORDER :&str = "ORDSYS/1.0 NOT_READY"; //Definiera en konstant som indikerar att ingen order är redo.
 
 pub fn order_confirm_db(positions:Vec<Position>){
 
