@@ -8,6 +8,8 @@ use std::{
 use crate::{robot, Queue};
 use eframe::egui;
 
+pub fn init() {}
+
 pub(crate) fn run(
     robot_stream: Arc<Mutex<TcpStream>>,
     history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
@@ -18,6 +20,7 @@ pub(crate) fn run(
         viewport: egui::ViewportBuilder::default().with_inner_size([900.0, 450.0]),
         ..Default::default()
     };
+
     eframe::run_native(
         "Multiple viewports",
         options,

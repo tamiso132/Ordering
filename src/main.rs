@@ -64,73 +64,70 @@ fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
-const MY_IP: &str = "127.0.1.1:7070";
+const MY_IP: &str = "192.168.43.45:7071";
 fn main() {
     let grid = Arc::new(Mutex::new(Grid::new()));
-    let stream_bind = TcpListener::bind(MY_IP).unwrap();
-    let stream = stream_bind.accept().unwrap().0;
-    stream.set_nonblocking(true).unwrap();
+    let mut stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
+
+    stream_.set_nonblocking(true);
+    let stream_ = Arc::new(Mutex::new(stream_));
+    let stream_2 = Arc::clone(&stream_);
+    let stream_3 = Arc::clone(&stream_);
+    let stream_4 = Arc::clone(&stream_);
 
     let is_order_in_process: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     let current_order: Arc<Mutex<Option<([u16; 4], u16)>>> = Arc::new(Mutex::new(None));
-
     let finished_orders = OrdersFinished::new(Mutex::new(Queue {
         list_of_queue: VecDeque::new(),
     }));
-
     let orders_to_process = CurrentOrders::new(Mutex::new(Queue {
         list_of_queue: VecDeque::new(),
     }));
-
     let sort_request: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-
-    let robot_stream = Arc::new(Mutex::new(stream));
-
-    let current_orders_1 = orders_to_process.clone();
-
+    let current_orders_1 = Arc::clone(&orders_to_process);
     let finished_add = finished_orders.clone();
-
-    let stream_clone = Arc::clone(&robot_stream);
     let grid_clone = Arc::clone(&grid);
     thread::spawn(move || {
         read_database_thread(current_orders_1);
     });
-
     thread::spawn(move || {
-        robot::robot_read(
-            robot_stream.clone(),
-            sort_request,
-            finished_add.clone(),
-            grid,
-        );
+        println!("hh");
+        robot::robot_read(stream_2, sort_request, finished_add.clone(), grid);
     });
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-
     let history_orders = Arc::new(Mutex::new(vec![]));
-    loop {
+
+    let history_orders_1 = Arc::clone(&history_orders);
+    let current_order_3 = Arc::clone(&current_order);
+    let order_to_process = Arc::clone(&orders_to_process);
+
+    let current_order = Arc::clone(&current_order);
+    let history = Arc::clone(&history_orders);
+    std::thread::spawn(move || {
         thread::sleep(Duration::from_secs(10));
-        let grid = Arc::clone(&grid_clone);
+        let mut grid = Arc::clone(&grid_clone);
         process_order_queue(
-            grid.clone(),
-            orders_to_process.clone(),
-            is_order_in_process.clone(),
-            current_order.clone(),
-            stream_clone.clone(),
+            Arc::clone(&grid),
+            Arc::clone(&orders_to_process),
+            Arc::clone(&is_order_in_process),
+            Arc::clone(&current_order),
+            stream_4,
         );
         process_finished_order(
-            finished_orders.clone(),
-            history_orders.clone(),
-            current_order.clone(),
+            Arc::clone(&finished_orders),
+            Arc::clone(&history_orders),
+            Arc::clone(&current_order.clone()),
         );
-        graphic::run(
-            stream_clone.clone(),
-            history_orders.clone(),
-            current_order.clone(),
-            orders_to_process.clone(),
-        )
-        .unwrap();
-    }
+    });
+    graphic::run(
+        stream_3,
+        history_orders_1.clone(),
+        current_order_3.clone(),
+        order_to_process.clone(),
+    )
+    .unwrap();
+    println!("does it even go out of graphic?");
 }
 
 fn process_finished_order(
@@ -175,7 +172,7 @@ fn process_order_queue(
                 .unwrap();
             *current_order.lock().unwrap() = Some(order_to_send.clone());
             let positions = g.unwrap().get_positions_for_order(order_to_send.0);
-            robot::send_order(order_to_send.1 as u8, positions, stream);
+            robot::send_order(order_to_send.1 as u8, positions, stream, );
         }
     }
 }

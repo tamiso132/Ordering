@@ -134,8 +134,8 @@ impl Grid {
     }
 
     pub fn get_free_position(&self) -> Option<(usize, usize)> {
-        for x in 0..XMAX {
-            for y in 0..YMAX {
+        for y in 0..YMAX {
+            for x in 0..XMAX {
                 if self.grid[x][y] == -1 {
                     return Some((x, y));
                 }
