@@ -1,4 +1,3 @@
-
 use std::{
     collections::VecDeque,
     io::{Read, Write},
@@ -65,7 +64,7 @@ fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
-const MY_IP: &str = "";
+const MY_IP: &str = "127.0.1.1:7070";
 fn main() {
     let grid = Arc::new(Mutex::new(Grid::new()));
     let stream_bind = TcpListener::bind(MY_IP).unwrap();

@@ -12,7 +12,7 @@ use crate::{
     Queue,
 };
 
-const MY_IP: &str = "PLACE HOLDER";
+const MY_IP: &str = "127.0.1.1";
 
 pub fn robot_read(
     stream: Arc<Mutex<TcpStream>>,
