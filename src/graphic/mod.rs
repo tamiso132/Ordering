@@ -1,19 +1,15 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
 
 use std::{
-    fmt::format,
-    os::unix::thread,
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
+    net::TcpStream,
+    sync::{Arc, Mutex},
 };
 
+use crate::{robot, Queue};
 use eframe::egui;
 
-use crate::Queue;
-
 pub(crate) fn run(
+    robot_stream: Arc<Mutex<TcpStream>>,
     history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
     current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
     orders_to_process: Arc<Mutex<Queue<([u16; 4], u16)>>>,
@@ -33,6 +29,7 @@ pub(crate) fn run(
                 toggle_current: false,
                 toggle_inprocess: false,
                 orders_to_process,
+                robot_stream,
             })
         }),
     )
@@ -46,12 +43,19 @@ struct MyApp {
     current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
     history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
     orders_to_process: Arc<Mutex<Queue<([u16; 4], u16)>>>,
+    robot_stream: Arc<Mutex<TcpStream>>,
 }
 
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
             ui.vertical_centered(|ui| {
+                if ui.button("Start").clicked() {
+                    robot::send_start(self.robot_stream.clone());
+                }
+                if ui.button("Stop").clicked() {
+                    robot::send_stop(self.robot_stream.clone());
+                }
                 if ui.button("Current Order").clicked() {
                     self.toggle_current = !self.toggle_current;
                 };

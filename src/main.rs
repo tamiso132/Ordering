@@ -1,3 +1,4 @@
+
 use std::{
     collections::VecDeque,
     io::{Read, Write},
@@ -7,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-use server::{read_order_updates, Grid, Position, PositionWithColor};
+use server::{Grid, Position};
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
 
@@ -64,12 +65,12 @@ fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
-const MYIP: &str = "";
+const MY_IP: &str = "";
 fn main() {
     let grid = Arc::new(Mutex::new(Grid::new()));
-    let stream_bind = TcpListener::bind(MYIP).unwrap();
-    let mut stream = stream_bind.accept().unwrap().0;
-    stream.set_nonblocking(true);
+    let stream_bind = TcpListener::bind(MY_IP).unwrap();
+    let stream = stream_bind.accept().unwrap().0;
+    stream.set_nonblocking(true).unwrap();
 
     let is_order_in_process: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
     let current_order: Arc<Mutex<Option<([u16; 4], u16)>>> = Arc::new(Mutex::new(None));
@@ -89,6 +90,8 @@ fn main() {
     let current_orders_1 = orders_to_process.clone();
 
     let finished_add = finished_orders.clone();
+
+    let stream_clone = Arc::clone(&robot_stream);
     let grid_clone = Arc::clone(&grid);
     thread::spawn(move || {
         read_database_thread(current_orders_1);
@@ -114,6 +117,7 @@ fn main() {
             orders_to_process.clone(),
             is_order_in_process.clone(),
             current_order.clone(),
+            stream_clone.clone(),
         );
         process_finished_order(
             finished_orders.clone(),
@@ -121,6 +125,7 @@ fn main() {
             current_order.clone(),
         );
         graphic::run(
+            stream_clone.clone(),
             history_orders.clone(),
             current_order.clone(),
             orders_to_process.clone(),
@@ -155,6 +160,7 @@ fn process_order_queue(
     orders_to_process: CurrentOrders,
     is_order_process: Arc<Mutex<bool>>,
     current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
+    stream: Arc<Mutex<TcpStream>>,
 ) {
     let is_order_process_c = is_order_process.lock().unwrap().clone();
     if !is_order_process_c {
@@ -170,7 +176,7 @@ fn process_order_queue(
                 .unwrap();
             *current_order.lock().unwrap() = Some(order_to_send.clone());
             let positions = g.unwrap().get_positions_for_order(order_to_send.0);
-            robot::send_order(order_to_send.1 as u8, positions);
+            robot::send_order(order_to_send.1 as u8, positions, stream);
         }
     }
 }
