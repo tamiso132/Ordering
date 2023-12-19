@@ -5,8 +5,8 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use serde_derive::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_derive::{Deserialize, Serialize}; // Importera attribut för att automatisk serialisering och deserialisering av strukturer med serde.
+use serde_json::{json, Value}; // Importera funktioner och typer från Serde JSON för att arbeta med JSON-data.
 
 use crate::send_and_receive_data;
 
@@ -40,6 +40,7 @@ pub const SERVER_IP: &'static str = "192.168.88.71:7878";
 const NO_ORDER: &str = "ORDSYS/1.0 NOT_READY";
 
 pub fn order_confirm_db(positions: Vec<Position>) {}
+//pub const SERVER_IP: &'static str = "213.200.135.239:7878";
 
 pub fn get_order_from_db() -> Option<String> {
     let order_json = send_and_receive_data(SERVER_IP, request::REQUEST_LINE_PROCESS).unwrap();

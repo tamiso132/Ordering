@@ -37,13 +37,15 @@ pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Er
 }
 
 #[derive(Clone)]
-struct Queue<T: Clone>
+struct Queue<T: Clone> // En generisk köstruktur som används för att hantera olika typer av order.
 where
     T: Clone,
 {
     list_of_queue: VecDeque<T>,
 }
+ 
 
+// En trådfunktion som periodiskt läser uppdateringar från en databas och lägger dem i kön för att processas.
 fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
     loop {
         {
@@ -64,7 +66,7 @@ fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
 type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
 type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
 
-const MY_IP: &str = "192.168.43.45:7071";
+const MY_IP: &str = "192.168.43.45:7071"; // Servens IP-adress och portnummer.
 fn main() {
     let grid = Arc::new(Mutex::new(Grid::new()));
     let mut stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
@@ -90,6 +92,7 @@ fn main() {
     thread::spawn(move || {
         read_database_thread(current_orders_1);
     });
+
     thread::spawn(move || {
         println!("hh");
         robot::robot_read(stream_2, sort_request, finished_add.clone(), grid);
