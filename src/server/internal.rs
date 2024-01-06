@@ -36,7 +36,7 @@ pub(crate) mod request {
 }
 
 //pub const SERVER_IP: &'static str = "213.200.135.239:7878";
-pub const SERVER_IP: &'static str = "192.168.88.71:7878";
+pub const SERVER_IP: &'static str = "192.168.88.173:7878"; //
 const NO_ORDER: &str = "ORDSYS/1.0 NOT_READY";
 
 pub fn order_confirm_db(positions: Vec<Position>) {}
@@ -44,10 +44,8 @@ pub fn order_confirm_db(positions: Vec<Position>) {}
 
 pub fn get_order_from_db() -> Option<String> {
     let order_json = send_and_receive_data(SERVER_IP, request::REQUEST_LINE_PROCESS).unwrap();
-
+    println!("From server: {}", order_json);
     if order_json.contains(NO_ORDER) {
-        // no order found
-        println!("No Order");
         return None;
     }
     Some(order_json)
@@ -66,7 +64,15 @@ pub(crate) fn update_position(x: u32, y: u32, color: Color) {
     send_and_receive_data(SERVER_IP, &output);
 }
 
-pub(crate) fn get_positions_from_db() -> [[i8; XMAX]; YMAX] {
+#[derive(Debug, Deserialize, Serialize)]
+struct Product {
+    position_x: i32,
+    position_y: i32,
+    empty: bool,
+    product_type_id: i32,
+}
+
+pub(crate) fn get_positions_from_db() -> [[i8; YMAX]; XMAX] {
     let order_json =
         send_and_receive_data(SERVER_IP, request::REQUEST_GET_ORDER_POSITIONS_FULL).unwrap();
 
@@ -76,9 +82,7 @@ pub(crate) fn get_positions_from_db() -> [[i8; XMAX]; YMAX] {
     lines.next();
     lines.next();
 
-    println!("{}", order_json);
-
-    let mut grid_info: [[i8; XMAX]; YMAX] = [[-1; XMAX]; YMAX];
+    let mut grid_info: [[i8; YMAX]; XMAX] = [[-1; YMAX]; XMAX];
 
     for line in lines {
         let lower_case = line.to_lowercase();
@@ -95,10 +99,13 @@ pub(crate) fn get_positions_from_db() -> [[i8; XMAX]; YMAX] {
         let mut empty_val = "0";
         let mut product_type = -1;
 
+        let mut v: Vec<u8> = vec![];
+        println!("{:?}\n", lower);
         for attribute in lower {
             if attribute.contains(position_x_str) {
                 let val_str = &attribute[position_x_str.len()..attribute.len() - 1];
                 position_x_val = val_str.parse::<u16>().unwrap();
+                println!("yeppers: {}", position_x_val);
             }
             if attribute.contains(position_y_str) {
                 let val_str = &attribute[position_y_str.len()..attribute.len() - 1];
@@ -114,9 +121,9 @@ pub(crate) fn get_positions_from_db() -> [[i8; XMAX]; YMAX] {
             }
         }
 
-        if empty_val.contains("true") {
-            grid_info[position_x_val as usize][position_y_val as usize] = product_type;
-        }
+        // if empty_val.contains("true") {
+        //     grid_info[position_x_val as usize][position_y_val as usize] = product_type;
+        // }
     }
 
     grid_info

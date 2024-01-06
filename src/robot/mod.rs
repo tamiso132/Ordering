@@ -2,7 +2,6 @@ use std::{
     io::{Read, Write},
     net::TcpStream,
     sync::{Arc, Mutex},
-    thread,
     time::Duration,
 };
 
@@ -10,44 +9,23 @@ use serde_json::{json, Value};
 
 use crate::{
     server::{self, Color, Grid, Position},
-    Queue,
+    Queue, Thing,
 };
 
 const MY_IP: &str = "192.168.88.71:7070";
 
-pub fn robot_read(
-    mut stream: Arc<Mutex<TcpStream>>,
-    sort_request: Arc<Mutex<bool>>,
-    finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>,
-    grid: Arc<Mutex<Grid>>,
-) {
-    loop {
-        let mut buffer = String::new();
-        stream.lock().unwrap().read_to_string(&mut buffer);
-        if buffer.len() > 0 {
-            let finished_orders = finished_orders.clone();
-            let sort_request = Arc::clone(&sort_request);
-            let grid = Arc::clone(&grid);
-            println!("does it even come here?,, blu");
-            interpret_robot(
-                Arc::clone(&stream),
-                buffer,
-                finished_orders,
-                sort_request,
-                grid,
-            );
-        }
+pub fn robot_read(thing: Arc<Mutex<Thing>>, stream: Arc<Mutex<TcpStream>>) {
+    let mut buffer = String::new();
+    let s_clone = stream.clone();
+    stream.lock().unwrap().read_to_string(&mut buffer);
+    if buffer.len() > 0 {
+        interpret_robot(thing, buffer, s_clone);
     }
 }
 
-fn interpret_robot(
-    stream: Arc<Mutex<TcpStream>>,
-    buffer: String,
-    finished_orders: Arc<Mutex<Queue<(Vec<Position>, u16)>>>,
-    sort_request: Arc<Mutex<bool>>,
-    grid: Arc<Mutex<Grid>>,
-) {
+fn interpret_robot(mut thing: Arc<Mutex<Thing>>, buffer: String, stream: Arc<Mutex<TcpStream>>) {
     if buffer.len() > 0 {
+        println!("buffer: {}", buffer);
         let s: Value = serde_json::from_str(&buffer).unwrap();
 
         let command_type = s["command"].to_string();
@@ -59,9 +37,10 @@ fn interpret_robot(
             let order_id = s["order_id"].as_u64().unwrap();
             let positions: Vec<Position> =
                 serde_json::from_str(&s["positions"].to_string()).unwrap();
-            finished_orders
+            thing
                 .lock()
                 .unwrap()
+                .finished_orders
                 .list_of_queue
                 .push_front((positions, order_id as u16));
         }
@@ -70,13 +49,17 @@ fn interpret_robot(
             let y = s["y"].as_u64().unwrap() as u8;
             let color = s["color"].as_u64().unwrap() as u8;
             let color = Color::from(color);
-            grid.lock().unwrap().sort_insert_lager_position(x, y, color);
+            thing
+                .lock()
+                .unwrap()
+                .grid
+                .sort_insert_lager_position(x, y, color);
         }
         if command_type.contains("sort_request") {
             println!("I get sort request");
-            *sort_request.lock().unwrap() = true;
+            thing.lock().unwrap().sort_request = true;
             let color = s["color"].to_string().parse::<u64>().unwrap();
-            let pos = grid.lock().unwrap().get_free_position().unwrap();
+            let pos = thing.lock().unwrap().grid.get_free_position().unwrap();
             send_sort(
                 Position {
                     position_x: pos.0,
@@ -85,7 +68,6 @@ fn interpret_robot(
                 stream,
                 color,
             );
-            println!("does it come here");
         }
     }
 }

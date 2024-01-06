@@ -67,21 +67,50 @@ impl From<u8> for Color {
         }
     }
 }
-
+#[derive(Deserialize, Serialize)]
 pub struct Grid {
-    grid: [[i8; XMAX]; YMAX],
+    grid: [[i8; YMAX]; XMAX],
 }
 impl Grid {
     pub fn new() -> Self {
         //TODO get init from database
         let grid = get_positions_from_db();
+        //let grid = [[-1; YMAX]; XMAX];
 
         Self { grid }
     }
+    pub fn get_free(&self) -> (u16, u16, u16, u16) {
+        let mut red = 0;
+        let mut yellow = 0;
+        let mut green = 0;
+        let mut blue = 0;
+        for y in 0..YMAX - 1 {
+            for x in 0..XMAX - 1 {
+                let color = self.grid[x][y] + 1;
+                match color {
+                    0 => {}
+                    1 => {
+                        red += 1;
+                    }
+                    2 => {
+                        yellow += 1;
+                    }
+                    3 => {
+                        green += 1;
+                    }
+                    4 => {
+                        blue += 1;
+                    }
+                    e => panic!("{e}"),
+                }
+            }
+        }
+        return (red, yellow, green, blue);
+    }
     pub fn get_positions_for_order(&self, mut objects: [u16; 4]) -> Vec<Position> {
         let mut positions = vec![];
-        for y in 0..YMAX {
-            for x in 0..XMAX {
+        for y in 0..YMAX - 1 {
+            for x in 0..XMAX - 1 {
                 let color = self.grid[x][y];
                 match color {
                     -1 => {}
@@ -134,8 +163,8 @@ impl Grid {
     }
 
     pub fn get_free_position(&self) -> Option<(usize, usize)> {
-        for y in 0..YMAX {
-            for x in 0..XMAX {
+        for y in 0..YMAX - 1 {
+            for x in 0..XMAX - 1 {
                 if self.grid[x][y] == -1 {
                     return Some((x, y));
                 }
@@ -172,20 +201,19 @@ pub fn send_order_done_db(positions: Vec<Position>, order_id: u32) {
     );
 
     send_and_receive_data(SERVER_IP, &full_request);
-    println!("{}", full_request);
 }
 
 pub fn read_order_updates() -> Option<([u16; 4], u16)> {
+    
     let order_json = get_order_from_db();
-
     if order_json == None {
-        println!("No Order");
+        // NO ORDER
         return None;
     }
+    println!("ORDER IS FOUND");
     let order_json = order_json.unwrap();
     let mut order_id = 0;
     let mut total_amount = [0, 0, 0, 0];
-
     for line in order_json.lines() {
         if line.contains("\"id\"") {
             let number_str = line[6..line.len() - 1].trim();

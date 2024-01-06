@@ -2,11 +2,14 @@ use std::{
     collections::VecDeque,
     io::{Read, Write},
     net::{SocketAddr, TcpListener, TcpStream},
+    ops::Deref,
     sync::{Arc, Mutex},
     thread,
     time::Duration,
 };
 
+use eframe::glow::CONSTANT_COLOR;
+use serde_derive::{Deserialize, Serialize};
 use server::{Grid, Position};
 
 // Importera nödvändiga bibliotek för serialisering och deserialiserinf av JSON
@@ -21,161 +24,180 @@ pub mod server;
 
 pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Error> {
     // Parse the IP address
-    let addr: SocketAddr = format!("{}", ip).parse().unwrap();
 
+    let addr: SocketAddr = format!("{}", ip).parse().unwrap();
     // Elablera en TCP-anslutning
-    let mut stream = TcpStream::connect(addr)?;
+    let mut stream = TcpStream::connect(addr).unwrap();
 
     // Skicka data till servern
-    stream.write_all(data.as_bytes())?;
+    stream.write_all(data.as_bytes()).unwrap();
 
     // Läs svaret från servern
     let mut buffer = String::new();
-    stream.read_to_string(&mut buffer)?;
+    stream.read_to_string(&mut buffer).unwrap();
 
+    println!("{}", buffer);
     Ok(buffer)
 }
 
-#[derive(Clone)]
-struct Queue<T: Clone> // En generisk köstruktur som används för att hantera olika typer av order.
+#[derive(Clone, Serialize, Deserialize)]
+struct Queue<T: Clone>
+// En generisk köstruktur som används för att hantera olika typer av order.
 where
     T: Clone,
 {
     list_of_queue: VecDeque<T>,
 }
- 
 
 // En trådfunktion som periodiskt läser uppdateringar från en databas och lägger dem i kön för att processas.
-fn read_database_thread(orders: Arc<Mutex<Queue<([u16; 4], u16)>>>) {
-    loop {
-        {
-            match server::read_order_updates() {
-                Some(order) => orders
+fn read_database_thread(thing: Arc<Mutex<Thing>>) {
+    if !thing.lock().unwrap().is_order_in_process.clone() {
+        match server::read_order_updates() {
+            Some(order) => {
+                thing
                     .lock()
-                    .expect("Failed to lock current_orders")
+                    .unwrap()
+                    .orders_to_process
                     .list_of_queue
-                    .push_front(order),
-                None => {}
-            }
-        }
+                    .push_front(order);
 
-        thread::sleep(Duration::from_secs(60));
+                thing.lock().unwrap().is_order_in_process = true;
+            }
+            None => {}
+        }
     }
 }
 
-type OrdersFinished = Arc<Mutex<Queue<(Vec<Position>, u16)>>>;
-type CurrentOrders = Arc<Mutex<Queue<([u16; 4], u16)>>>;
+#[derive(Serialize, Deserialize)]
+pub struct Thing {
+    grid: Grid,
+    current_order: Option<([u16; 4], u16)>,
+    finished_orders: Queue<(Vec<Position>, u16)>,
+    orders_to_process: Queue<([u16; 4], u16)>,
+    history_orders: Vec<([u16; 4], u16)>,
+
+    is_order_in_process: bool,
+    sort_request: bool,
+}
+
+impl Thing {
+    pub fn run(mutex: Arc<Mutex<Self>>, stream: Arc<Mutex<TcpStream>>) {
+        loop {
+            thread::sleep(Duration::from_secs(3));
+            robot::robot_read(mutex.clone(), stream.clone());
+            thread::sleep(Duration::from_secs(3));
+            println!("robot read");
+            read_database_thread(mutex.clone()); // PUT TIMERS ON STUFF, TO GIVE
+            thread::sleep(Duration::from_secs(3));
+            println!("database");
+            process_order_queue(mutex.clone(), stream.clone());
+            thread::sleep(Duration::from_secs(3));
+            println!("processs");
+            process_finished_order(mutex.clone());
+            thread::sleep(Duration::from_secs(3));
+            println!("finished");
+        }
+    }
+}
 
 const MY_IP: &str = "192.168.43.45:7071"; // Servens IP-adress och portnummer.
 fn main() {
-    let grid = Arc::new(Mutex::new(Grid::new()));
-    let mut stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
+    let grid = Grid::new();
+    let stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
 
     stream_.set_nonblocking(true);
-    let stream_ = Arc::new(Mutex::new(stream_));
-    let stream_2 = Arc::clone(&stream_);
-    let stream_3 = Arc::clone(&stream_);
-    let stream_4 = Arc::clone(&stream_);
+    stream_.set_read_timeout(Some(Duration::from_millis(100)));
 
-    let is_order_in_process: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    let current_order: Arc<Mutex<Option<([u16; 4], u16)>>> = Arc::new(Mutex::new(None));
-    let finished_orders = OrdersFinished::new(Mutex::new(Queue {
-        list_of_queue: VecDeque::new(),
-    }));
-    let orders_to_process = CurrentOrders::new(Mutex::new(Queue {
-        list_of_queue: VecDeque::new(),
-    }));
-    let sort_request: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
-    let current_orders_1 = Arc::clone(&orders_to_process);
-    let finished_add = finished_orders.clone();
-    let grid_clone = Arc::clone(&grid);
-    thread::spawn(move || {
-        read_database_thread(current_orders_1);
-    });
+    let stream = Arc::new(Mutex::new(stream_));
 
-    thread::spawn(move || {
-        println!("hh");
-        robot::robot_read(stream_2, sort_request, finished_add.clone(), grid);
-    });
+    let is_order_in_process = false;
+    let current_order: Option<([u16; 4], u16)> = None;
+    let finished_orders: Queue<(Vec<Position>, u16)> = Queue {
+        list_of_queue: VecDeque::new(),
+    };
+    let mut orders_to_process: Queue<([u16; 4], u16)> = Queue {
+        list_of_queue: VecDeque::new(),
+    };
+
+    let history_orders: Vec<([u16; 4], u16)> = vec![];
+
+    let sort_request = false;
+
+    // TODO TEST CODE, REMEMBER TO DELETE IT
+
+    // orders_to_process
+    //     .list_of_queue
+    //     .push_front(([3, 0, 0, 0], 1));
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
-    let history_orders = Arc::new(Mutex::new(vec![]));
+                        //let current_orders_1 = Arc::clone(&orders_to_process);
+    let all = Thing {
+        grid,
+        current_order,
+        finished_orders,
+        orders_to_process,
+        is_order_in_process,
+        sort_request,
+        history_orders,
+    };
+    let mutex = Arc::new(Mutex::new(all));
+    let second = mutex.clone();
+    let second_stream = stream.clone();
 
-    let history_orders_1 = Arc::clone(&history_orders);
-    let current_order_3 = Arc::clone(&current_order);
-    let order_to_process = Arc::clone(&orders_to_process);
+    thread::sleep(Duration::from_millis(100));
+    std::thread::spawn(|| Thing::run(mutex, stream));
 
-    let current_order = Arc::clone(&current_order);
-    let history = Arc::clone(&history_orders);
-    std::thread::spawn(move || {
-        thread::sleep(Duration::from_secs(10));
-        let mut grid = Arc::clone(&grid_clone);
-        process_order_queue(
-            Arc::clone(&grid),
-            Arc::clone(&orders_to_process),
-            Arc::clone(&is_order_in_process),
-            Arc::clone(&current_order),
-            stream_4,
-        );
-        process_finished_order(
-            Arc::clone(&finished_orders),
-            Arc::clone(&history_orders),
-            Arc::clone(&current_order.clone()),
-        );
-    });
-    graphic::run(
-        stream_3,
-        history_orders_1.clone(),
-        current_order_3.clone(),
-        order_to_process.clone(),
-    )
-    .unwrap();
-    println!("does it even go out of graphic?");
+    loop {
+        let second = second.clone();
+        let second_stream = second_stream.clone();
+
+        graphic::run(second, second_stream).unwrap();
+    }
 }
 
-fn process_finished_order(
-    finished_orders: OrdersFinished,
-    history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
-    current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
-) {
-    let orders_done_len = finished_orders.lock().unwrap().list_of_queue.len();
+fn process_finished_order(thing: Arc<Mutex<Thing>>) {
+    let orders_done_len = thing
+        .lock()
+        .unwrap()
+        .finished_orders
+        .list_of_queue
+        .len()
+        .clone();
     if orders_done_len > 0 {
-        let order_done = finished_orders
+        let order_done = thing
             .lock()
             .unwrap()
+            .finished_orders
             .list_of_queue
             .pop_front()
             .unwrap();
 
-        let d = current_order.lock().unwrap().clone().unwrap();
-        history_orders.lock().unwrap().push((d.0, d.1));
-        *current_order.lock().unwrap() = None;
+        let d = thing.lock().unwrap().current_order.clone().unwrap();
+        thing.lock().unwrap().history_orders.push((d.0, d.1));
+        thing.lock().unwrap().current_order = None;
         server::send_order_done_db(order_done.0, order_done.1 as u32);
     }
 }
 
-fn process_order_queue(
-    grid: Arc<Mutex<Grid>>,
-    orders_to_process: CurrentOrders,
-    is_order_process: Arc<Mutex<bool>>,
-    current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
-    stream: Arc<Mutex<TcpStream>>,
-) {
-    let is_order_process_c = is_order_process.lock().unwrap().clone();
-    if !is_order_process_c {
-        let order_queue_len = orders_to_process.lock().unwrap().list_of_queue.len();
-        if order_queue_len > 0 {
-            let g = grid.lock();
-            *is_order_process.lock().unwrap() = true;
-            let order_to_send = orders_to_process
-                .lock()
-                .unwrap()
-                .list_of_queue
-                .pop_front()
-                .unwrap();
-            *current_order.lock().unwrap() = Some(order_to_send.clone());
-            let positions = g.unwrap().get_positions_for_order(order_to_send.0);
-            robot::send_order(order_to_send.1 as u8, positions, stream, );
+fn process_order_queue(thing: Arc<Mutex<Thing>>, stream: Arc<Mutex<TcpStream>>) {
+    match thing.lock() {
+        Ok(mut thing) => {
+            if !thing.is_order_in_process {
+                if thing.orders_to_process.list_of_queue.len() > 0 {
+                    thing.is_order_in_process = true;
+                    let order_to_send = thing
+                        .orders_to_process
+                        .list_of_queue
+                        .pop_front()
+                        .unwrap()
+                        .clone();
+                    thing.current_order = Some(order_to_send);
+                    let positions = thing.grid.get_positions_for_order(order_to_send.0);
+
+                    robot::send_order(order_to_send.1 as u8, positions, stream.clone());
+                }
+            }
         }
+        Err(e) => println!("{e}"),
     }
 }
