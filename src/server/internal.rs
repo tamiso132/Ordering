@@ -36,7 +36,7 @@ pub(crate) mod request {
 }
 
 //pub const SERVER_IP: &'static str = "213.200.135.239:7878";
-pub const SERVER_IP: &'static str = "192.168.88.173:7878"; //
+pub const SERVER_IP: &'static str = "192.168.0.109:7878"; //
 const NO_ORDER: &str = "ORDSYS/1.0 NOT_READY";
 
 pub fn order_confirm_db(positions: Vec<Position>) {}
@@ -44,7 +44,6 @@ pub fn order_confirm_db(positions: Vec<Position>) {}
 
 pub fn get_order_from_db() -> Option<String> {
     let order_json = send_and_receive_data(SERVER_IP, request::REQUEST_LINE_PROCESS).unwrap();
-    println!("From server: {}", order_json);
     if order_json.contains(NO_ORDER) {
         return None;
     }
@@ -100,7 +99,6 @@ pub(crate) fn get_positions_from_db() -> [[i8; YMAX]; XMAX] {
         let mut product_type = -1;
 
         let mut v: Vec<u8> = vec![];
-        println!("{:?}\n", lower);
         for attribute in lower {
             if attribute.contains(position_x_str) {
                 let val_str = &attribute[position_x_str.len()..attribute.len() - 1];
@@ -126,5 +124,6 @@ pub(crate) fn get_positions_from_db() -> [[i8; YMAX]; XMAX] {
         // }
     }
 
+    println!("get grid");
     grid_info
 }

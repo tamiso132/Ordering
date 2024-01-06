@@ -36,7 +36,6 @@ pub fn send_and_receive_data(ip: &str, data: &str) -> Result<String, std::io::Er
     let mut buffer = String::new();
     stream.read_to_string(&mut buffer).unwrap();
 
-    println!("{}", buffer);
     Ok(buffer)
 }
 
@@ -51,21 +50,21 @@ where
 
 // En trådfunktion som periodiskt läser uppdateringar från en databas och lägger dem i kön för att processas.
 fn read_database_thread(thing: Arc<Mutex<Thing>>) {
-    if !thing.lock().unwrap().is_order_in_process.clone() {
-        match server::read_order_updates() {
-            Some(order) => {
-                thing
-                    .lock()
-                    .unwrap()
-                    .orders_to_process
-                    .list_of_queue
-                    .push_front(order);
+    // if !thing.lock().unwrap().is_order_in_process.clone() {
+    match server::read_order_updates() {
+        Some(order) => {
+            thing
+                .lock()
+                .unwrap()
+                .orders_to_process
+                .list_of_queue
+                .push_front(order);
 
-                thing.lock().unwrap().is_order_in_process = true;
-            }
-            None => {}
+            thing.lock().unwrap().is_order_in_process = true;
         }
+        None => {}
     }
+    //  }
 }
 
 #[derive(Serialize, Deserialize)]
@@ -81,21 +80,18 @@ pub struct Thing {
 }
 
 impl Thing {
-    pub fn run(mutex: Arc<Mutex<Self>>, stream: Arc<Mutex<TcpStream>>) {
+    // stream: Arc<Mutex<TcpStream>>
+    pub fn run(mutex: Arc<Mutex<Self>>) {
         loop {
-            thread::sleep(Duration::from_secs(3));
-            robot::robot_read(mutex.clone(), stream.clone());
-            thread::sleep(Duration::from_secs(3));
-            println!("robot read");
+            thread::sleep(Duration::from_millis(200));
+            // robot::robot_read(mutex.clone(), stream.clone());
+            thread::sleep(Duration::from_millis(200));
             read_database_thread(mutex.clone()); // PUT TIMERS ON STUFF, TO GIVE
-            thread::sleep(Duration::from_secs(3));
-            println!("database");
-            process_order_queue(mutex.clone(), stream.clone());
-            thread::sleep(Duration::from_secs(3));
-            println!("processs");
+            thread::sleep(Duration::from_millis(200));
+            process_order_queue(mutex.clone());
+            thread::sleep(Duration::from_millis(200));
             process_finished_order(mutex.clone());
-            thread::sleep(Duration::from_secs(3));
-            println!("finished");
+            thread::sleep(Duration::from_millis(200));
         }
     }
 }
@@ -103,12 +99,12 @@ impl Thing {
 const MY_IP: &str = "192.168.43.45:7071"; // Servens IP-adress och portnummer.
 fn main() {
     let grid = Grid::new();
-    let stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
+    // let stream_ = TcpStream::connect("192.168.88.222:12000").unwrap();
 
-    stream_.set_nonblocking(true);
-    stream_.set_read_timeout(Some(Duration::from_millis(100)));
+    // stream_.set_nonblocking(true);
+    // stream_.set_read_timeout(Some(Duration::from_millis(100)));
 
-    let stream = Arc::new(Mutex::new(stream_));
+    //  let stream = Arc::new(Mutex::new(stream_));
 
     let is_order_in_process = false;
     let current_order: Option<([u16; 4], u16)> = None;
@@ -142,16 +138,15 @@ fn main() {
     };
     let mutex = Arc::new(Mutex::new(all));
     let second = mutex.clone();
-    let second_stream = stream.clone();
+    //  let second_stream = stream.clone();
 
     thread::sleep(Duration::from_millis(100));
-    std::thread::spawn(|| Thing::run(mutex, stream));
+    std::thread::spawn(|| Thing::run(mutex));
 
     loop {
         let second = second.clone();
-        let second_stream = second_stream.clone();
-
-        graphic::run(second, second_stream).unwrap();
+        // let second_stream = second_stream.clone();
+        graphic::run(second).unwrap();
     }
 }
 
@@ -179,7 +174,7 @@ fn process_finished_order(thing: Arc<Mutex<Thing>>) {
     }
 }
 
-fn process_order_queue(thing: Arc<Mutex<Thing>>, stream: Arc<Mutex<TcpStream>>) {
+fn process_order_queue(thing: Arc<Mutex<Thing>>) {
     match thing.lock() {
         Ok(mut thing) => {
             if !thing.is_order_in_process {
@@ -194,7 +189,7 @@ fn process_order_queue(thing: Arc<Mutex<Thing>>, stream: Arc<Mutex<TcpStream>>) 
                     thing.current_order = Some(order_to_send);
                     let positions = thing.grid.get_positions_for_order(order_to_send.0);
 
-                    robot::send_order(order_to_send.1 as u8, positions, stream.clone());
+                    // robot::send_order(order_to_send.1 as u8, positions, stream.clone());
                 }
             }
         }

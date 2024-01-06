@@ -204,7 +204,6 @@ pub fn send_order_done_db(positions: Vec<Position>, order_id: u32) {
 }
 
 pub fn read_order_updates() -> Option<([u16; 4], u16)> {
-    
     let order_json = get_order_from_db();
     if order_json == None {
         // NO ORDER

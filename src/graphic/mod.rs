@@ -15,7 +15,7 @@ pub fn init() {}
 
 pub(crate) fn run(
     all: Arc<Mutex<Thing>>,
-    stream: Arc<Mutex<TcpStream>>,
+    // stream: Arc<Mutex<TcpStream>>,
 ) -> Result<(), eframe::Error> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default().with_inner_size([900.0, 450.0]),
@@ -27,7 +27,7 @@ pub(crate) fn run(
         options,
         Box::new(|_cc| {
             Box::new(MyApp {
-                stream,
+                //  stream,
                 all,
                 toggle_history: false,
                 toggle_current: false,
@@ -46,7 +46,7 @@ struct MyApp {
     toggle_history: bool,
     toggle_current: bool,
     toggle_inprocess: bool,
-    stream: Arc<Mutex<TcpStream>>, // current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
+    // stream: Arc<Mutex<TcpStream>>, // current_order: Arc<Mutex<Option<([u16; 4], u16)>>>,
     // history_orders: Arc<Mutex<Vec<([u16; 4], u16)>>>,
     // orders_to_process: Arc<Mutex<Queue<([u16; 4], u16)>>>,
     // robot_stream: Arc<Mutex<TcpStream>>,
@@ -59,8 +59,8 @@ struct MyApp {
 impl eframe::App for MyApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            thread::sleep(Duration::from_millis(100));
             let thing = self.all.lock().unwrap();
-            thread::sleep(Duration::from_millis(500));
             ui.horizontal(|ui| {
                 let name_label = ui.label("Red");
                 ui.text_edit_singleline(&mut self.red)
@@ -81,7 +81,6 @@ impl eframe::App for MyApp {
                 ui.text_edit_singleline(&mut self.blue)
                     .labelled_by(name_label.id);
             });
-            thread::sleep(Duration::from_millis(500));
             ui.horizontal(|ui| {
                 if ui.button("Submit").clicked() {
                     if !self.red.is_empty()
@@ -106,7 +105,7 @@ impl eframe::App for MyApp {
                                         let v = thing
                                             .grid
                                             .get_positions_for_order([red, yellow, green, blue]);
-                                        robot::send_order(10, v, self.stream.clone());
+                                        // robot::send_order(10, v, self.stream.clone());
                                     }
                                 }
                             }
@@ -114,14 +113,13 @@ impl eframe::App for MyApp {
                     }
                 }
             });
-            thread::sleep(Duration::from_millis(500));
             ui.vertical_centered(|ui| {
                 ui.button("Start").clicked();
                 if ui.button("Start").clicked() {
-                    robot::send_start(self.stream.clone());
+                    //  robot::send_start(self.stream.clone());
                 }
                 if ui.button("Stop").clicked() {
-                    robot::send_stop(self.stream.clone());
+                    // robot::send_stop(self.stream.clone());
                 }
                 if ui.button("Current Order").clicked() {
                     self.toggle_current = !self.toggle_current;
@@ -139,7 +137,6 @@ impl eframe::App for MyApp {
                 if ui.button("Order History").clicked() {
                     self.toggle_history = !self.toggle_history;
                 }
-                thread::sleep(Duration::from_millis(500));
                 if self.toggle_history {
                     egui::ScrollArea::vertical()
                         .max_height(100.0)
@@ -180,7 +177,6 @@ impl eframe::App for MyApp {
                         });
                 }
             });
-            thread::sleep(Duration::from_millis(500));
 
             if ui.button("Toggle ScrollArea").clicked() {
                 self.toggle_history = !self.toggle_history;
