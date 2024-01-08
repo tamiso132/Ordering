@@ -136,27 +136,28 @@ impl eframe::App for MyApp {
                 if ui.button("Order History").clicked() {
                     self.toggle_history = !self.toggle_history;
                 }
-                if self.toggle_history {
-                    egui::ScrollArea::horizontal()
-                        .max_height(500.0)
-                        .show(ui, |ui| {
-                            // Dynamically add labels
-                            if thing.history_orders.len() > 0 {
-                                let history = thing.history_orders.clone();
-                                println!("history len: {}", thing.history_orders.len());
-                                for i in 0..history.len() {
-                                    ui.label(format!("Order-id: {}", history[i].1));
-                                    ui.label(format!("Red: {}", history[i].0[0]));
-                                    ui.label(format!("Yellow: {}", history[i].0[1]));
-                                    ui.label(format!("Green: {}", history[i].0[2]));
-                                    ui.label(format!("Blue: {}\n", history[i].0[3]));
-                                    ui.spacing_mut().item_spacing.y = 10.0;
-                                    ui.end_row();
-                                }
-                            }
-                        });
-                }
             });
+            if self.toggle_history {
+                egui::ScrollArea::vertical()
+                    .max_width(500.0)
+                    .max_height(500.0)
+                    .show(ui, |ui| {
+                        // Dynamically add labels
+                        if thing.history_orders.len() > 0 {
+                            let history = thing.history_orders.clone();
+                            println!("history len: {}", thing.history_orders.len());
+                            for i in 0..history.len() {
+                                ui.label(format!("Order-id: {}", history[i].1));
+                                ui.label(format!("Red: {}", history[i].0[0]));
+                                ui.label(format!("Yellow: {}", history[i].0[1]));
+                                ui.label(format!("Green: {}", history[i].0[2]));
+                                ui.label(format!("Blue: {}\n", history[i].0[3]));
+                                ui.spacing_mut().item_spacing.y = 10.0;
+                                ui.end_row();
+                            }
+                        }
+                    });
+            }
 
             if ui.button("Toggle ScrollArea").clicked() {
                 self.toggle_history = !self.toggle_history;

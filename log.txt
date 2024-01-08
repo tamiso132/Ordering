@@ -1,8 +1,98 @@
-Timestamp: 2024-1-8-12-32 Message: Sort request, received from robot
-Timestamp: 2024-1-8-12-32 Message: Sort completed, received from robot
-Timestamp: 2024-1-8-12-34 Message: Sort request, received from robot
-Timestamp: 2024-1-8-12-34 Message: Sort completed, received from robot
-Timestamp: 2024-1-8-12-34 Message: Sort request, received from robot
-Timestamp: 2024-1-8-12-35 Message: Sort completed, received from robot
-Timestamp: 2024-1-8-12-35 Message: Sort request, received from robot
-Timestamp: 2024-1-8-12-35 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-53 Message: Sending order to robot
+Timestamp: 2024-1-8-12-53 Message: Order completed, received from robot
+Timestamp: 2024-1-8-12-53 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-12-55 Message: Sort request, received from robot
+Timestamp: 2024-1-8-12-55 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-12-56 Message: Sort request, received from robot
+Timestamp: 2024-1-8-12-56 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-12-56 Message: New Order has been retrieved
+Timestamp: 2024-1-8-12-56 Message: Sending order to robot
+Timestamp: 2024-1-8-12-57 Message: Order completed, received from robot
+Timestamp: 2024-1-8-12-57 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-13-33 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-34 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-34 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-34 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-34 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-35 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-37 Message: New Order has been retrieved
+Timestamp: 2024-1-8-13-37 Message: Sending order to robot
+Timestamp: 2024-1-8-13-47 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-47 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-47 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-48 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-49 Message: New Order has been retrieved
+Timestamp: 2024-1-8-13-49 Message: Sending order to robot
+Timestamp: 2024-1-8-13-50 Message: Order completed, received from robot
+Timestamp: 2024-1-8-13-50 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-13-55 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-55 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-13-55 Message: Sort request, received from robot
+Timestamp: 2024-1-8-13-56 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-0 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-1 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-2 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-2 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-2 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-8 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-8 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-8 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-9 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-9 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-9 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-9 Message: New Order has been retrieved
+Timestamp: 2024-1-8-14-9 Message: Sending order to robot
+Timestamp: 2024-1-8-14-11 Message: Order completed, received from robot
+Timestamp: 2024-1-8-14-11 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-14-27 Message: New Order has been retrieved
+Timestamp: 2024-1-8-14-27 Message: Sending order to robot
+Timestamp: 2024-1-8-14-28 Message: Order completed, received from robot
+Timestamp: 2024-1-8-14-28 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-14-28 Message: New Order has been retrieved
+Timestamp: 2024-1-8-14-28 Message: Sending order to robot
+Timestamp: 2024-1-8-14-28 Message: Order completed, received from robot
+Timestamp: 2024-1-8-14-28 Message: Order has been completed, sending confirm to server
+Timestamp: 2024-1-8-14-28 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-29 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-29 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-29 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-29 Message: Sort request, received from robot
+Timestamp: 2024-1-8-14-30 Message: Sort completed, received from robot
+Timestamp: 2024-1-8-14-30 Message: New Order has been retrieved
+Timestamp: 2024-1-8-14-30 Message: Sending order to robot
+Timestamp: 2024-1-8-14-31 Message: Order completed, received from robot
+Timestamp: 2024-1-8-14-31 Message: Order has been completed, sending confirm to server

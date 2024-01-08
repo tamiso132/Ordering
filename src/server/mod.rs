@@ -3,7 +3,8 @@ use serde_json::json;
 
 use crate::{
     send_and_receive_data,
-    server::internal::{get_order_from_db, request, SERVER_IP}, write_log_file,
+    server::internal::{get_order_from_db, request, SERVER_IP},
+    write_log_file,
 };
 
 use self::internal::{get_positions_from_db, update_position};
@@ -239,13 +240,13 @@ pub fn read_order_updates() -> Option<([u16; 4], u16)> {
     let mut total_amount = [0, 0, 0, 0];
 
     print!("order json: {}", order_json);
+    write_log_file("New Order has been retrieved");
     for line in order_json.lines() {
         if line.contains("\"id\"") {
             let number_str = line[6..line.len() - 1].trim();
             let id = number_str.parse::<u16>().unwrap();
             order_id = id;
         }
-        write_log_file("New Order has been retrieved");
         if line.contains("\"product_type\"") {
             let str_total = "\"total_product_amount\":";
             let str_color = "{\"product_type\": \"";

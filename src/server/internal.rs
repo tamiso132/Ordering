@@ -35,8 +35,8 @@ pub(crate) mod request {
     const REQUEST_REPORT_FAIL_NO_BODY: &'static str = "REPORT orders/id ORDSYS/1.0\nStatus: FAIL";
 }
 
-//pub const SERVER_IP: &'static str = "213.200.135.239:7878";
-pub const SERVER_IP: &'static str = "192.168.88.221:7878"; //
+pub const SERVER_IP: &'static str = "213.200.135.239:7878";
+//pub const SERVER_IP: &'static str = "192.168.88.221:7878"; //
 const NO_ORDER: &str = "ORDSYS/1.0 NOT_READY";
 
 pub fn order_confirm_db(positions: Vec<Position>) {}
