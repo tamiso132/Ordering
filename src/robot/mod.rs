@@ -9,7 +9,7 @@ use serde_json::{json, Value};
 
 use crate::{
     server::{self, Color, Grid, Position},
-    Queue, Thing,
+    write_log_file, Queue, Thing,
 };
 
 const MY_IP: &str = "192.168.88.71:7070";
@@ -37,12 +37,15 @@ fn interpret_robot(mut thing: Arc<Mutex<Thing>>, buffer: String, stream: Arc<Mut
             let order_id = s["order_id"].as_u64().unwrap();
             let positions: Vec<Position> =
                 serde_json::from_str(&s["positions"].to_string()).unwrap();
+            println!("Order confirm, positions");
             thing
                 .lock()
                 .unwrap()
                 .finished_orders
                 .list_of_queue
                 .push_front((positions, order_id as u16));
+            write_log_file("Order completed, received from robot");
+            println!("added to finished orders");
         }
         if command_type.contains("sort_confirm") {
             let x = s["x"].as_u64().unwrap() as u8;
@@ -54,12 +57,14 @@ fn interpret_robot(mut thing: Arc<Mutex<Thing>>, buffer: String, stream: Arc<Mut
                 .unwrap()
                 .grid
                 .sort_insert_lager_position(x, y, color);
+            write_log_file("Sort completed, received from robot");
         }
         if command_type.contains("sort_request") {
-            println!("I get sort request");
             thing.lock().unwrap().sort_request = true;
+            println!("I get sort request, {}", s);
             let color = s["color"].to_string().parse::<u64>().unwrap();
             let pos = thing.lock().unwrap().grid.get_free_position().unwrap();
+            write_log_file("Sort request, received from robot");
             send_sort(
                 Position {
                     position_x: pos.0,
@@ -78,6 +83,8 @@ pub fn send_order(order_id: u8, positions: Vec<Position>, stream: Arc<Mutex<TcpS
         "order-id": order_id,
         "positions": positions
     });
+
+    println!("order sent: {}", person_json);
     stream
         .lock()
         .unwrap()
@@ -92,6 +99,7 @@ fn send_sort(position: Position, stream: Arc<Mutex<TcpStream>>, color: u64) {
         "x": position.position_x,
         "y": position.position_y,
     });
+    println!("sort request {}", person_json);
     stream
         .lock()
         .unwrap()

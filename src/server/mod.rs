@@ -3,7 +3,7 @@ use serde_json::json;
 
 use crate::{
     send_and_receive_data,
-    server::internal::{get_order_from_db, request, SERVER_IP},
+    server::internal::{get_order_from_db, request, SERVER_IP}, write_log_file,
 };
 
 use self::internal::{get_positions_from_db, update_position};
@@ -28,6 +28,7 @@ pub struct PositionWithColor {
 #[repr(u8)]
 #[derive(Clone, Copy, Serialize, Deserialize)]
 pub enum Color {
+    None,
     Red,
     Yellow,
     Green,
@@ -57,10 +58,10 @@ impl Color {
 impl From<u8> for Color {
     fn from(value: u8) -> Self {
         match value {
-            0 => Color::Red,
-            1 => Color::Yellow,
-            2 => Color::Green,
-            3 => Color::Blue,
+            1 => Color::Red,
+            2 => Color::Yellow,
+            3 => Color::Green,
+            4 => Color::Blue,
             _ => {
                 panic!("not existing color")
             }
@@ -69,7 +70,7 @@ impl From<u8> for Color {
 }
 #[derive(Deserialize, Serialize)]
 pub struct Grid {
-    grid: [[i8; YMAX]; XMAX],
+    grid: [[u8; YMAX]; XMAX],
 }
 impl Grid {
     pub fn new() -> Self {
@@ -78,6 +79,16 @@ impl Grid {
         //let grid = [[-1; YMAX]; XMAX];
 
         Self { grid }
+    }
+
+    pub fn print_all(&self) {
+        print!("start printing\n");
+        for y in 0..YMAX - 1 {
+            for x in 0..XMAX - 1 {
+                let color = self.grid[x][y];
+                println!("X: {}\nY: {}\nColor: {}", x, y, color);
+            }
+        }
     }
     pub fn get_free(&self) -> (u16, u16, u16, u16) {
         let mut red = 0;
@@ -111,21 +122,15 @@ impl Grid {
         let mut positions = vec![];
         for y in 0..YMAX - 1 {
             for x in 0..XMAX - 1 {
+                if objects[0] == 0 && objects[1] == 0 && objects[2] == 0 && objects[3] == 0 {
+                    return positions;
+                }
                 let color = self.grid[x][y];
                 match color {
-                    -1 => {}
-                    0 => {
-                        if objects[Color::Red as usize] > 0 {
-                            objects[Color::Red as usize] -= 1;
-                            positions.push(Position {
-                                position_x: x,
-                                position_y: y,
-                            });
-                        }
-                    }
+                    0 => {}
                     1 => {
-                        if objects[Color::Yellow as usize] > 0 {
-                            objects[Color::Yellow as usize] -= 1;
+                        if objects[Color::Red as usize - 1] > 0 {
+                            objects[Color::Red as usize - 1] -= 1;
                             positions.push(Position {
                                 position_x: x,
                                 position_y: y,
@@ -133,8 +138,8 @@ impl Grid {
                         }
                     }
                     2 => {
-                        if objects[Color::Green as usize] > 0 {
-                            objects[Color::Green as usize] -= 1;
+                        if objects[Color::Yellow as usize - 1] > 0 {
+                            objects[Color::Yellow as usize - 1] -= 1;
                             positions.push(Position {
                                 position_x: x,
                                 position_y: y,
@@ -142,8 +147,17 @@ impl Grid {
                         }
                     }
                     3 => {
-                        if objects[Color::Blue as usize] > 0 {
-                            objects[Color::Blue as usize] -= 1;
+                        if objects[Color::Green as usize - 1] > 0 {
+                            objects[Color::Green as usize - 1] -= 1;
+                            positions.push(Position {
+                                position_x: x,
+                                position_y: y,
+                            });
+                        }
+                    }
+                    4 => {
+                        if objects[Color::Blue as usize - 1] > 0 {
+                            objects[(Color::Blue as usize) - 1] -= 1;
                             positions.push(Position {
                                 position_x: x,
                                 position_y: y,
@@ -156,8 +170,15 @@ impl Grid {
         }
         positions
     }
+
+    pub fn order_update_position(&mut self, positions: Vec<Position>) {
+        for pos in positions {
+            self.grid[pos.position_x][pos.position_y] = 0;
+        }
+    }
+
     pub fn sort_insert_lager_position(&mut self, x: u8, y: u8, color: Color) {
-        self.grid[x as usize][y as usize] = color as i8;
+        self.grid[x as usize][y as usize] = color as u8;
 
         update_position(x as u32, y as u32, color);
     }
@@ -165,8 +186,10 @@ impl Grid {
     pub fn get_free_position(&self) -> Option<(usize, usize)> {
         for y in 0..YMAX - 1 {
             for x in 0..XMAX - 1 {
-                if self.grid[x][y] == -1 {
+                if self.grid[x][y] == 0 {
                     return Some((x, y));
+                } else {
+                    println!("position: {}", self.grid[x][y]);
                 }
             }
         }
@@ -183,10 +206,11 @@ struct OrderSend {
 
 pub fn send_order_done_db(positions: Vec<Position>, order_id: u32) {
     let mut order_send = vec![];
+    print!("position to reset: {}", positions.len());
     for p in positions {
         let position_x = p.position_x;
         let position_y = p.position_y;
-        let product_type_id = -1;
+        let product_type_id = 0;
         order_send.push(OrderSend {
             position_x,
             position_y,
@@ -209,17 +233,19 @@ pub fn read_order_updates() -> Option<([u16; 4], u16)> {
         // NO ORDER
         return None;
     }
-    println!("ORDER IS FOUND");
+
     let order_json = order_json.unwrap();
     let mut order_id = 0;
     let mut total_amount = [0, 0, 0, 0];
+
+    print!("order json: {}", order_json);
     for line in order_json.lines() {
         if line.contains("\"id\"") {
             let number_str = line[6..line.len() - 1].trim();
             let id = number_str.parse::<u16>().unwrap();
             order_id = id;
         }
-
+        write_log_file("New Order has been retrieved");
         if line.contains("\"product_type\"") {
             let str_total = "\"total_product_amount\":";
             let str_color = "{\"product_type\": \"";
@@ -239,10 +265,9 @@ pub fn read_order_updates() -> Option<([u16; 4], u16)> {
 
             let amount = total_product_str.parse::<u16>().unwrap();
 
-            total_amount[color as usize] += amount;
+            total_amount[color as usize - 1] += amount;
         }
     }
-
     Some((total_amount, order_id))
 
     // TODO check if any new orders
